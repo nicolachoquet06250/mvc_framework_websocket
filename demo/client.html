@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8" />
+    <title>Websockets</title>
+</head>
+<body>
+<span id="pseudo" style="font-weight: bold;"></span>
+<input type="text" id="ws_message" placeholder="Saisissez votre message ici" autofocus />
+<button id="send_message">Envoyer le message</button>
+<span id="nb_messages"></span>
+<div id="board"></div>
+    <script>
+        window.onload = () => {
+            let pseudo  = prompt('Saisissez votre nom :');
+            let $pseudo = document.querySelector('#pseudo');
+            $pseudo.innerHTML = pseudo + '<hr>';
+            let $board = document.querySelector('#board');
+            let $msg = document.querySelector('#ws_message');
+            let $btn    = document.querySelector('#send_message');
+            let $nb_messages = document.querySelector('#nb_messages');
+            $nb_messages.innerHTML = '0';
+
+            let socket_msg = new WebSocket("ws://localhost:2107/chat");
+            let socket_user = new WebSocket("ws://localhost:2107/login");
+
+            socket_msg.onmessage = e => {
+                let data = JSON.parse(e.data);
+                if(data.connected === true) {
+                    $board.innerHTML += '<p><b><i>Vous êtes connecté !</i></b></p>';
+                }
+                else {
+                    let me = false;
+                    if(data.user === pseudo) {
+                        me = true;
+                    }
+                    $board.innerHTML += '<p><b>' + (me ? 'Vous' : data.user) + '</b> :<br>' + data.msg + '</p><hr>';
+                    $nb_messages.innerHTML = data.nb_messages;
+                }
+                console.log(e.data);
+            };
+
+            socket_user.onmessage = e => {
+                let data = JSON.parse(e.data);
+                console.log(data);
+            };
+
+            $msg.onkeyup = e => {
+                if(e.keyCode === 13) {
+                    $btn.click();
+                }
+            };
+
+            socket_msg.onopen = () => {
+                socket_msg.send(pseudo);
+                $btn.onclick = () => {
+                    socket_msg.send($msg.value);
+                    $msg.value = '';
+                };
+            };
+
+            socket_user.onopen = () => {
+                socket_user.send(JSON.stringify({connect: true}));
+                socket_user.send(JSON.stringify({is_connected: true}));
+                socket_user.send(JSON.stringify({disconnect: true}));
+                socket_user.send(JSON.stringify({is_connected: true}));
+            };
+        }
+    </script>
+</body>
+</html>
